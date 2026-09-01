@@ -34,10 +34,11 @@ export function buildRows(node, path = [], labelPrefix = []) {
 }
 
 /**
- * Decided per element, not per array: an array of objects gets a strip plus its
- * own fields, an array of strings gets one editable row each, and a mixed array
- * gets the right treatment for both. Dispatching per array would send an object
- * down the scalar path, where String(value) turns it into "[object Object]".
+ * Decided per element, not per array. An element that is an i18n leaf becomes
+ * one row with the locale columns filled; an object becomes a strip plus its
+ * own fields; a string becomes one editable row. A mixed array therefore gets
+ * the right treatment for each element, and dispatching per array would send
+ * an object down the scalar path where String(value) yields "[object Object]".
  */
 function buildArrayRows(arr, path, name, label) {
   const base = pathKey(path);
@@ -50,7 +51,16 @@ function buildArrayRows(arr, path, name, label) {
 
   arr.forEach((item, index) => {
     const itemPath = [...path, index];
-    if (isObj(item)) {
+    if (isI18n(item)) {
+      rows.push({
+        type: "localisedItem",
+        key: base + "[" + index + "]",
+        path,
+        index,
+        total: arr.length,
+        label: [...label, String(index + 1)],
+      });
+    } else if (isObj(item)) {
       rows.push({ type: "strip", key: base + "[" + index + "]", path, index, total: arr.length });
       rows.push(...buildRows(item, itemPath));
     } else if (Array.isArray(item)) {

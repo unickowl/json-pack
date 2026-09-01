@@ -8,8 +8,8 @@ const click = el => el.dispatchEvent(new MouseEvent("click", { bubbles: true }))
   while (!$("#source") && Date.now() - t0 < 8000) await wait(50);
   if (location.hash === "#footnotes") {
     const doc = { footnotes: [
-      "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates.",
-      "" ] };
+      { en: "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates.", zh_tw: "", ja: "" },
+      { en: "", zh_tw: "", ja: "" } ] };
     const el = $("#source");
     Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set.call(el, JSON.stringify(doc, null, 4));
     el.dispatchEvent(new Event("input", { bubbles: true }));

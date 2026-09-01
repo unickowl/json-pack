@@ -96,21 +96,40 @@ async function output() {
   log.push("6  diagnostics on bad paste  : " + ok($$(".errbox li").length > 0) +
     " hints=" + JSON.stringify($$(".errbox li").map(li => li.textContent.slice(0, 42))));
 
-  // ── footnotes: a plain string array the user can grow and shrink ────────
+  // ── footnotes: an array of localised values, side by side ───────────────
   await restart();
   click($(".link"));                                    // Load the example
   await wait(120);
   click([...$$(".btn--fill")].find(b => b.textContent.includes("Build")));
-  await wait(200);
+  await wait(220);
   let sample = JSON.parse(await output());
   const DEFAULT_FOOTNOTE = "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates. It does not represent OwlTing's recognized revenue or realized processed volume.";
   log.push("9  footnotes default present : " + ok(Array.isArray(sample.footnotes) && sample.footnotes.length === 1));
-  log.push("9  default text byte-exact   : " + ok(sample.footnotes[0] === DEFAULT_FOOTNOTE));
-  log.push("9  list rows rendered        : " + $$(".row--listitem").length + " " + ok($$(".row--listitem").length === 1));
+  log.push("9  default is localised      : " + ok(sample.footnotes[0] && typeof sample.footnotes[0] === "object" &&
+    JSON.stringify(Object.keys(sample.footnotes[0])) === '["en","zh_tw","ja"]') +
+    " keys=" + JSON.stringify(Object.keys(sample.footnotes[0] || {})));
+  log.push("9  default en byte-exact     : " + ok(sample.footnotes[0].en === DEFAULT_FOOTNOTE));
 
-  // add two, and check they are strings rather than objects
-  // The add control sits in .row--add normally and in .row--empty once the
-  // array is empty, so find it by walking forward from its own band.
+  const footRows = () => $$(".row--localised");
+  log.push("9  one row, lanes not stacked: rows=" + footRows().length +
+    " lanes=" + (footRows()[0] ? footRows()[0].querySelectorAll("textarea").length : 0) +
+    " " + ok(footRows().length === 1 && footRows()[0].querySelectorAll("textarea").length === 3));
+  log.push("9  band says localised       : " + ok(($$(".row--band").find(b =>
+    b.querySelector("h2").textContent.trim().toLowerCase() === "footnotes") || {textContent:""})
+    .textContent.includes("localised text")));
+  log.push("9  path label readable       : " + JSON.stringify(footRows()[0].querySelector(".c1 .k").textContent) +
+    " " + ok(footRows()[0].querySelector(".c1 .k").textContent === "footnotes[0]"));
+
+  // the empty locales offer the English text as a reference placeholder
+  const lanesOf = row => [...row.querySelectorAll("textarea")];
+  log.push("9  empty locale shows en ref : " + ok(lanesOf(footRows()[0])[1].placeholder === DEFAULT_FOOTNOTE));
+
+  // translate into zh_tw
+  type(lanesOf(footRows()[0])[1], "＊代表與活躍客戶相關的年化交易總額。"); await wait(100);
+  sample = JSON.parse(await output());
+  log.push("9  zh_tw written to leaf     : " + ok(sample.footnotes[0].zh_tw === "＊代表與活躍客戶相關的年化交易總額。" && sample.footnotes[0].en === DEFAULT_FOOTNOTE));
+
+  // add two more, and check they arrive localised rather than as bare strings
   const addFor = name => {
     const band = $$(".row--band").find(b => b.querySelector("h2").textContent.trim().toLowerCase() === name);
     let n = band;
@@ -121,37 +140,40 @@ async function output() {
     return null;
   };
   const footAdd = () => addFor("footnotes");
-  click(footAdd()); await wait(90);
-  click(footAdd()); await wait(90);
+  click(footAdd()); await wait(100);
+  click(footAdd()); await wait(100);
   sample = JSON.parse(await output());
-  log.push("9  add appends empty strings : " + ok(sample.footnotes.length === 3 && sample.footnotes.every(f => typeof f === "string")) +
+  log.push("9  add appends i18n objects  : " + ok(sample.footnotes.length === 3 &&
+    sample.footnotes.slice(1).every(f => f && typeof f === "object" && "en" in f && "zh_tw" in f && "ja" in f)) +
     " -> " + JSON.stringify(sample.footnotes.slice(1)));
 
-  // type into the third one, including a double quote
-  const footRows = $$(".row--listitem");
-  type(footRows[2].querySelector("textarea"), 'Second note with "quotes" and OwlTing’s apostrophe');
-  await wait(90);
+  // type into the third row's English lane, including a double quote
+  type(lanesOf(footRows()[2])[0], 'Second note with "quotes" and OwlTing’s apostrophe'); await wait(100);
   sample = JSON.parse(await output());
-  log.push("9  typed footnote exact      : " + ok(sample.footnotes[2] === 'Second note with "quotes" and OwlTing’s apostrophe'));
+  log.push("9  typed footnote exact      : " + ok(sample.footnotes[2].en === 'Second note with "quotes" and OwlTing’s apostrophe'));
 
-  // reorder: move the third up
-  click($$(".row--listitem")[2].querySelectorAll(".tool")[0]); await wait(90);
+  // reorder
+  click(footRows()[2].querySelectorAll(".tool")[0]); await wait(100);
   sample = JSON.parse(await output());
-  log.push("9  footnote move up          : " + ok(sample.footnotes[1].startsWith("Second note")));
+  log.push("9  footnote move up          : " + ok(sample.footnotes[1].en.startsWith("Second note")));
 
-  // remove every footnote, then add one back
+  // index labels must be 1-based
+  log.push("9  index labels 1-based      : " + JSON.stringify(footRows().map(r => r.querySelector(".c1 .n").textContent)) +
+    " " + ok(footRows()[0].querySelector(".c1 .n").textContent.trim() === "Item 1"));
+
+  // remove everything, then add one back
   let fguard = 0;
-  while ($$(".row--listitem").length && fguard++ < 8) {
-    click($$(".row--listitem")[0].querySelectorAll(".tool")[3]);
-    await wait(70);
+  while (footRows().length && fguard++ < 8) {
+    click(footRows()[0].querySelectorAll(".tool")[3]);
+    await wait(80);
   }
   sample = JSON.parse(await output());
   log.push("9  emptied to []             : " + ok(Array.isArray(sample.footnotes) && sample.footnotes.length === 0));
-  click(footAdd()); await wait(100);
+  click(footAdd()); await wait(110);
   sample = JSON.parse(await output());
-  log.push("9  re-add still a string     : " + ok(sample.footnotes.length === 1 && typeof sample.footnotes[0] === "string") +
-    " -> " + JSON.stringify(sample.footnotes));
-  log.push("9  content array untouched    : " + ok(sample.content.length === 2) + " (len=" + sample.content.length + ")");
+  log.push("9  re-add still localised    : " + ok(sample.footnotes.length === 1 &&
+    JSON.stringify(sample.footnotes[0]) === '{"en":"","zh_tw":"","ja":""}') + " -> " + JSON.stringify(sample.footnotes));
+  log.push("9  content array untouched   : " + ok(sample.content.length === 2) + " (len=" + sample.content.length + ")");
 
   // ── undo / redo across text, reordering and item changes ───────────────
   await restart();

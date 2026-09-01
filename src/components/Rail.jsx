@@ -30,7 +30,8 @@ export default function Rail({ doc, locales, hues, fieldCount, localised, onJump
       nodes.push({ id: key, glyph: "[ ]", label: key + " · " + value.length, node: value });
       value.forEach((item, i) => {
         const title = isObj(item) && isI18n(item.title) ? item.title[locales[0]] : "";
-        const preview = typeof item === "string" ? item : "";
+        const own = isI18n(item) ? item[locales[0]] || Object.values(item).find(Boolean) || "" : "";
+        const preview = typeof item === "string" ? item : own;
         nodes.push({
           id: key + "[" + i + "]",
           glyph: String(i + 1).padStart(2, "0"),

@@ -79,6 +79,11 @@ export function blankItem(shape, locales) {
 
 /** A fresh value matching what an array already holds. */
 export function blankOfKind(kind, fields, locales) {
+  if (kind === "i18n") {
+    const leaf = {};
+    locales.forEach(l => put(leaf, l, ""));
+    return leaf;
+  }
   if (kind === "object") return blankItem(fields || [], locales);
   if (kind === "number") return 0;
   if (kind === "boolean") return false;
@@ -95,9 +100,11 @@ export function collectShapes(root) {
   (function walk(node, path) {
     if (Array.isArray(node)) {
       if (node.length) {
-        shapes.set(path, isItemArray(node)
-          ? { item: "object", fields: readShape(node) }
-          : { item: kindOf(node.find(v => v !== null && !isObj(v) && !Array.isArray(v))) });
+        // An element that is itself an i18n leaf is one localised value, not a
+        // record of fields — it gets a row with the locale columns filled.
+        if (node.every(isI18n)) shapes.set(path, { item: "i18n" });
+        else if (isItemArray(node)) shapes.set(path, { item: "object", fields: readShape(node) });
+        else shapes.set(path, { item: kindOf(node.find(v => v !== null && !isObj(v) && !Array.isArray(v))) });
       }
       node.forEach((item, i) => walk(item, path + "[" + i + "]"));
       return;

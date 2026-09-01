@@ -4,7 +4,7 @@ import { documentStats } from "../lib/format.js";
 import { localeMeta, tint } from "../lib/locales.js";
 import { buildRows, pathKey } from "../lib/rows.js";
 import { getIn, arrayInsert, arrayRemove, arrayMove } from "../lib/immutable.js";
-import { FieldRow, ScalarRow, ListItemRow, Band, ItemStrip, AddRow } from "./Rows.jsx";
+import { FieldRow, ScalarRow, ListItemRow, LocalisedItemRow, Band, ItemStrip, AddRow } from "./Rows.jsx";
 import Rail from "./Rail.jsx";
 import { IconAlert } from "./Icons.jsx";
 
@@ -138,6 +138,30 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
             if (row.type === "band") {
               return <Band key={row.key} name={row.name} count={row.count} shape={shapeFor(row.path)} />;
             }
+            if (row.type === "localisedItem") {
+              return (
+                <LocalisedItemRow
+                  key={row.key}
+                  node={getIn(doc, [...row.path, row.index])}
+                  index={row.index}
+                  total={row.total}
+                  path={row.path}
+                  pathLabel={row.key}
+                  locales={locales}
+                  hues={hues}
+                  onChange={onValueChange}
+                  onMove={(from, to) => onArrayChange(row.path, arr => arrayMove(arr, from, to), "move item")}
+                  onDuplicate={i => {
+                    onArrayChange(row.path, arr => arrayInsert(arr, i + 1, { ...arr[i] }), "duplicate item");
+                    onToast("Item duplicated");
+                  }}
+                  onRemove={i => {
+                    onArrayChange(row.path, arr => arrayRemove(arr, i), "remove item");
+                    onToast("Item removed — undo with " + undoKeys());
+                  }}
+                />
+              );
+            }
             if (row.type === "listitem") {
               const shape = shapeFor(row.path);
               return (
@@ -148,7 +172,7 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
                   total={row.total}
                   itemKind={shape ? shape.item : "string"}
                   laneCount={locales.length}
-                  label={row.label}
+                  pathLabel={row.key}
                   onChange={v => onValueChange([...row.path, row.index], v)}
                   onMove={(from, to) => onArrayChange(row.path, arr => arrayMove(arr, from, to), "move item")}
                   onDuplicate={i => {
@@ -169,6 +193,7 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
                   id={stripId(row.path, row.index)}
                   index={row.index}
                   total={row.total}
+                  pathLabel={row.key}
                   locales={locales}
                   hues={hues}
                   onMove={(from, to) => onArrayChange(row.path, arr => arrayMove(arr, from, to), "move item")}

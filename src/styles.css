@@ -240,15 +240,9 @@ main { min-width: 0; padding: 26px 30px 140px; max-width: 1320px; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1;
 }
 
-.row--strip .c1 { min-height: 34px; gap: 8px; }
 .row--strip .lane, .row--add .lane { min-height: 34px; }
-.idx {
-  width: 21px; height: 21px; border-radius: 6px; background: var(--line2);
-  display: grid; place-items: center; font-family: var(--mono); font-size: 10.5px;
-  color: var(--ink2); flex-shrink: 0;
-}
 .tools { display: flex; gap: 1px; opacity: 0.5; transition: opacity 0.15s; }
-.row--strip:hover .tools, .row--listitem:hover .tools, .tools:focus-within { opacity: 1; }
+.row--strip:hover .tools, .row--item:hover .tools, .tools:focus-within { opacity: 1; }
 .tool {
   width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center;
   color: var(--ink3); transition: background 0.12s, color 0.12s;
@@ -266,7 +260,13 @@ main { min-width: 0; padding: 26px 30px 140px; max-width: 1320px; }
 .add:hover { color: var(--cobalt); box-shadow: inset 0 0 0 1px rgba(27, 79, 224, 0.4); }
 .add svg { width: 13px; height: 13px; }
 .row--empty .c1 { color: var(--ink3); font-size: 12.5px; gap: 12px; min-height: 44px; }
-.row--listitem .c1 { gap: 8px; align-items: flex-start; padding-top: 11px; }
+.row--item .c1 { gap: 9px; align-items: flex-start; }
+.row--strip .c1 { gap: 9px; min-height: 40px; }
+/* An item's identity is structural, so it is marked by type rather than by
+   yet another background grey: uppercase micro-caps, like the band above it. */
+.row--strip .c1 .n, .row--item .c1 .n {
+  color: var(--ink2); font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+}
 
 /* ── paste screen ────────────────────────────────────────────────────── */
 .paste-wrap { min-height: calc(100vh - var(--topbar-h)); display: grid; place-items: center; padding: 40px 24px 80px; }
@@ -342,9 +342,10 @@ main { min-width: 0; padding: 26px 30px 140px; max-width: 1320px; }
   .lane--wide { background: none; }
   .spanhint { display: none; }
   .row--strip .lane, .row--add .lane, .row--empty .lane { display: none; }
-  .row--listitem { flex-direction: column; }
-  .row--listitem .c1 { width: auto; flex: 1; min-height: 34px; padding-top: 0; align-items: center; }
-  .row--listitem .lane { border-left: 0; border-top: 1px solid var(--line2); }
+  .row--item { flex-direction: column; }
+  .row--item .c1 { width: auto; flex: 1; min-height: 34px; padding-top: 0; align-items: center; }
+  .row--item .c1 .k { padding-top: 0; }
+  .row--item .lane { border-left: 0; border-top: 1px solid var(--line2); align-items: flex-start; }
   .row--strip .c1, .row--add .c1, .row--empty .c1 { width: auto; flex: 1; }
   .head { flex-direction: column; align-items: flex-start; }
   .row--band .shape, .row--band .shape-label { display: none; }

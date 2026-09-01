@@ -13,6 +13,10 @@ export const SAMPLE = {
     },
   ],
   footnotes: [
-    "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates. It does not represent OwlTing's recognized revenue or realized processed volume.",
+    {
+      en: "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates. It does not represent OwlTing's recognized revenue or realized processed volume.",
+      zh_tw: "",
+      ja: "",
+    },
   ],
 };

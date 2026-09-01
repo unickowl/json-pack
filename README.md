@@ -61,15 +61,18 @@ grid was pixel-exact.
 ## Behaviour worth knowing
 
 - **Item shape is fixed.** Each array's field shape is captured at parse time, so adding an
-  item always reproduces the same thing even after deleting every item first — the same fields
-  (`title`, `paragraph_1`, `paragraph_2`) with every locale for an array of objects, an empty
-  string for an array of strings such as `footnotes`.
-- **Arrays of plain strings are editable too.** `footnotes` is a string array: each entry gets
-  its own row with reorder, duplicate and remove, and an Add item row. The value spans the
-  locale columns because the string is not localised, which the band states explicitly.
-- **Element type is decided per element, not per array.** A mixed array keeps its objects as
-  objects; dispatching per array would send an object down the scalar path and `String(value)`
-  would write `[object Object]` back out.
+  item always reproduces the same thing even after deleting every item first: the same fields
+  (`title`, `paragraph_1`, `paragraph_2`) with every locale for an array of records, a blank
+  set of locales for an array of localised values such as `footnotes`, an empty string for an
+  array of plain strings.
+- **An array element can be a localised value in its own right.** `footnotes` is an array of
+  `{en, zh_tw, ja}`, and each entry is one row with the translations side by side in the locale
+  columns — not three stacked rows. Column 1 carries the item's index, its real path
+  (`footnotes[0]`) and its reorder / duplicate / remove controls, so the lanes stay unbroken.
+- **Element type is decided per element, not per array.** An i18n leaf gets locale columns, a
+  record gets a header plus its own field rows, a plain string gets one wide value. A mixed
+  array therefore gets the right treatment for each element; dispatching per array would send
+  an object down the scalar path and `String(value)` would write `[object Object]` back out.
 - **A document with no localised fields still works.** Paste a bare `footnotes` array and the
   locale chrome disappears rather than showing an invented column.
 - **Types survive edits.** Editing `"count": 60` to `61` writes the number `61`, not `"61"`.
