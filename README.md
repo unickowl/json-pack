@@ -11,22 +11,37 @@ pnpm build      # -> dist/
 pnpm preview    # serve the build
 ```
 
+## Deploying
+
+Pushing to `main` runs `.github/workflows/deploy.yml`, which builds with pnpm and publishes
+`dist/` to GitHub Pages. Live at:
+
+    https://unickowl.github.io/json-pack/
+
+`vite.config.js` sets `base: "./"`, so assets resolve relative to the document and the app
+works under the `/json-pack/` sub-path without hardcoding it.
+
 ## Keeping it out of search engines
 
-This is an internal tool, so exclusion is layered:
+Be clear about what this does and does not achieve.
 
-| Where | What |
-|---|---|
-| `index.html` | `noindex, nofollow, noarchive, nosnippet, noimageindex` plus per-crawler tags for Google, Bing, Yahoo, DuckDuckGo, Baidu and Yandex, and `referrer: no-referrer` |
-| `public/robots.txt` | `Disallow: /` for every user agent |
-| `public/_headers` | `X-Robots-Tag: noindex, nofollow, …` — read by Netlify and Cloudflare Pages. Stronger than the meta tag because it also covers non-HTML responses |
+**A GitHub Pages site is public. There is no private option** outside GitHub Enterprise Cloud,
+so the URL is reachable by anyone who has it, whatever the repo's visibility. What limits the
+exposure here is the design, not the hosting: the tool stores nothing and uploads nothing, so
+a stranger with the URL gets an empty editor, never your content.
 
-Worth being clear about the limit: all three only *ask* crawlers to stay away, and a
-`Disallow` rule cannot stop someone who has the URL. If the content is sensitive, put the
-deployment behind authentication or on an internal network — that is the only real control.
+What is actually in effect:
 
-`public/_headers` also carries a CSP (`default-src 'none'`, `connect-src 'none'`) for hosts
-that read it. On a host that ignores the file, set the same headers in its own config.
+| Layer | On GitHub Pages | Notes |
+|---|---|---|
+| `noindex` meta tags in `index.html` | **works** | Per-crawler tags for Google, Bing, Yahoo, DuckDuckGo, Baidu and Yandex, plus `referrer: no-referrer`. This is the effective control |
+| Meta `Content-Security-Policy` | **works** | `default-src 'none'`, `connect-src 'none'` — the page cannot make network requests even if something tried |
+| `public/robots.txt` | **inert** | Crawlers only read `robots.txt` at the *domain* root. On a project page that is `unickowl.github.io/robots.txt`, which this repo does not control. Kept for other hosts |
+| `public/_headers` (`X-Robots-Tag`, CSP, `Referrer-Policy`) | **inert** | Pages cannot set response headers. Read by Netlify and Cloudflare Pages, so it stays for portability |
+
+`frame-ancestors` and `X-Robots-Tag` have no meta equivalent, so they are simply unavailable
+on Pages. If any of this needs to be a real restriction rather than a request, host it behind
+authentication instead — that is the only control that actually restricts access.
 
 ## Layout rule
 

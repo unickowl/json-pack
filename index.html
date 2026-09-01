@@ -4,6 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+    <!--
+      GitHub Pages cannot set response headers, so public/_headers is inert
+      there. Carry the policy in the document instead. frame-ancestors and
+      X-Robots-Tag have no meta equivalent and are simply unavailable on Pages.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+
     <!-- Internal tool. Keep it out of every index. -->
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate" />
     <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
