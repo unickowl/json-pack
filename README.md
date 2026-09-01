@@ -67,6 +67,18 @@ grid was pixel-exact.
 - **Types survive edits.** Editing `"count": 60` to `61` writes the number `61`, not `"61"`.
   If the new text is no longer a number, the field label says `number → string` rather than
   changing the type silently.
+- **Every change is reversible.** Undo/redo (`⌘Z` / `⌘⇧Z`, `Ctrl+Z` / `Ctrl+Y`) covers text
+  edits, reordering, duplicating, adding and removing items — including entries in string
+  arrays. A burst of typing collapses into one step, so undo steps back over a word rather than
+  a character; structural changes are always their own step. The button tooltip names what will
+  be reversed, e.g. *Undo edit content[0].title.en*. History resets when a new document is
+  parsed, and is capped at 100 steps.
+
+  Two consequences worth knowing. Removing an item asks for no confirmation, because an undo
+  that actually works beats a modal asking whether you meant it — the toast says which keys to
+  press. And the app takes over `⌘Z` even inside a text field: a controlled React textarea's
+  native undo stack drifts out of sync with application state, so leaving undo to the field
+  would be the less reliable option.
 - **Copy never lies.** If the clipboard is blocked or hangs, the output panel opens with the
   JSON selected and an error is shown — no false success.
 - **Problems are surfaced, not swallowed.** Duplicate keys, number-like keys (which JavaScript

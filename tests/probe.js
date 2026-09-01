@@ -153,6 +153,82 @@ async function output() {
     " -> " + JSON.stringify(sample.footnotes));
   log.push("9  content array untouched    : " + ok(sample.content.length === 2) + " (len=" + sample.content.length + ")");
 
+  // ── undo / redo across text, reordering and item changes ───────────────
+  await restart();
+  await paste('{"content":[{"title":{"en":"first","zh_tw":"","ja":""}},{"title":{"en":"second","zh_tw":"","ja":""}}],"notes":["note one"]}');
+  const undoBtn = () => $$(".history .tool")[0];
+  const redoBtn = () => $$(".history .tool")[1];
+  const keydown = (key, extra) => window.dispatchEvent(new KeyboardEvent("keydown",
+    Object.assign({ key, bubbles: true, cancelable: true, metaKey: true }, extra)));
+
+  log.push("11 fresh doc: undo disabled  : " + ok(undoBtn().disabled && redoBtn().disabled));
+
+  // a burst of typing must undo as one step
+  const cell = $$(".row--field textarea")[0];
+  type(cell, "f"); await wait(40);
+  type(cell, "fi"); await wait(40);
+  type(cell, "fir"); await wait(40);
+  type(cell, "firstEDIT"); await wait(60);
+  let doc11 = JSON.parse(await output());
+  log.push("11 burst applied            : " + ok(doc11.content[0].title.en === "firstEDIT"));
+  log.push("11 undo tooltip names it    : " + JSON.stringify(undoBtn().getAttribute("title")));
+  click(undoBtn()); await wait(120);
+  doc11 = JSON.parse(await output());
+  log.push("11 one undo reverts burst   : " + ok(doc11.content[0].title.en === "first") + " -> " + JSON.stringify(doc11.content[0].title.en));
+  click(redoBtn()); await wait(120);
+  doc11 = JSON.parse(await output());
+  log.push("11 redo restores burst      : " + ok(doc11.content[0].title.en === "firstEDIT"));
+
+  // reorder, then undo it
+  click($$(".row--strip")[1].querySelectorAll(".tool")[0]); await wait(100);
+  doc11 = JSON.parse(await output());
+  const reordered = doc11.content[0].title.en === "second";
+  keydown("z"); await wait(140);
+  doc11 = JSON.parse(await output());
+  log.push("11 undo reorder             : " + ok(reordered && doc11.content[0].title.en === "firstEDIT") +
+    " (reordered=" + reordered + ", after undo=" + JSON.stringify(doc11.content[0].title.en) + ")");
+
+  // add an item, undo it
+  const addContent = () => {
+    const band = $$(".row--band").find(b => b.querySelector("h2").textContent.trim().toLowerCase() === "content");
+    let n = band;
+    while ((n = n.nextElementSibling)) {
+      if (n.classList.contains("row--add") || n.classList.contains("row--empty")) return n.querySelector(".add");
+      if (n.classList.contains("row--band")) break;
+    }
+    return null;
+  };
+  click(addContent()); await wait(120);
+  const afterAdd = JSON.parse(await output()).content.length;
+  keydown("z"); await wait(140);
+  log.push("11 undo add item            : " + ok(afterAdd === 3 && JSON.parse(await output()).content.length === 2) +
+    " (" + afterAdd + " -> " + JSON.parse(await output()).content.length + ")");
+
+  // remove an item, undo it
+  click($$(".row--strip")[0].querySelectorAll(".tool")[3]); await wait(120);
+  const afterRemove = JSON.parse(await output()).content.length;
+  keydown("z"); await wait(140);
+  const restored = JSON.parse(await output());
+  log.push("11 undo remove item         : " + ok(afterRemove === 1 && restored.content.length === 2 && restored.content[0].title.en === "firstEDIT"));
+
+  // shift+cmd+z redoes
+  keydown("z", { shiftKey: true }); await wait(140);
+  log.push("11 shift+meta+z redoes      : " + ok(JSON.parse(await output()).content.length === 1));
+
+  // undo the primitive-array edit too
+  keydown("z", { shiftKey: false }); await wait(140);
+  const noteCell = $$(".row--listitem textarea")[0];
+  type(noteCell, "note one edited"); await wait(100);
+  log.push("11 note edited              : " + ok(JSON.parse(await output()).notes[0] === "note one edited"));
+  keydown("z"); await wait(140);
+  log.push("11 undo note edit           : " + ok(JSON.parse(await output()).notes[0] === "note one") +
+    " -> " + JSON.stringify(JSON.parse(await output()).notes[0]));
+
+  // a new document must not be undoable back into the previous one
+  await restart();
+  await paste('{"a":{"en":"x","zh_tw":"","ja":""}}');
+  log.push("11 history resets on parse  : " + ok(undoBtn().disabled && redoBtn().disabled));
+
   // ── mixed array must not turn an object into "[object Object]" ──────────
   await restart();
   await paste('{"mixed":[{"title":{"en":"kept","zh_tw":"","ja":""}},"a plain string"]}');

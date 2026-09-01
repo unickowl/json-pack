@@ -1,6 +1,13 @@
-import { IconCode, IconCopy } from "./Icons.jsx";
+import { IconCode, IconCopy, IconUndo, IconRedo } from "./Icons.jsx";
 
-export default function TopBar({ docName, status, hasDoc, rawOpen, copied, onBack, onToggleRaw, onCopy, shortcut }) {
+export default function TopBar({
+  docName, status, hasDoc, rawOpen, copied, shortcut,
+  undoKeys, redoKeys, canUndo, canRedo, undoLabel, redoLabel, onUndo, onRedo,
+  onBack, onToggleRaw, onCopy,
+}) {
+  const historyTitle = (verb, label, keys) =>
+    (label ? verb + " " + label : "Nothing to " + verb.toLowerCase()) + " (" + keys + ")";
+
   return (
     <div className="topbar">
       <div className="brand">
@@ -15,6 +22,31 @@ export default function TopBar({ docName, status, hasDoc, rawOpen, copied, onBac
           <span>{status ? status.label : "waiting"}</span>
         </span>
       </div>
+      {hasDoc && (
+        <>
+          <div className="rule" />
+          <div className="history">
+            <button
+              className="tool"
+              onClick={onUndo}
+              disabled={!canUndo}
+              title={historyTitle("Undo", undoLabel, undoKeys)}
+              aria-label={historyTitle("Undo", undoLabel, undoKeys)}
+            >
+              <IconUndo />
+            </button>
+            <button
+              className="tool"
+              onClick={onRedo}
+              disabled={!canRedo}
+              title={historyTitle("Redo", redoLabel, redoKeys)}
+              aria-label={historyTitle("Redo", redoLabel, redoKeys)}
+            >
+              <IconRedo />
+            </button>
+          </div>
+        </>
+      )}
       <div className="spacer" />
       {hasDoc && (
         <>

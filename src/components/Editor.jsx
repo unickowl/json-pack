@@ -10,6 +10,13 @@ import { IconAlert } from "./Icons.jsx";
 
 const MemoRail = memo(Rail);
 
+// Removing an item is one keystroke away from being reversible, so the toast
+// says how rather than a modal asking whether.
+const undoKeys = () =>
+  /Mac|iPhone|iPad/.test((typeof navigator !== "undefined" && (navigator.platform || navigator.userAgent)) || "")
+    ? "\u2318Z"
+    : "Ctrl+Z";
+
 const stripId = (path, index) => "item-" + pathKey(path).replace(/[^\w]/g, "-") + "-" + index;
 
 export default function Editor({ session, onValueChange, onArrayChange, onToast }) {
@@ -34,7 +41,7 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
   const addItem = path => {
     const shape = shapeFor(path);
     const kind = shape ? shape.item : "string";
-    onArrayChange(path, arr => [...arr, blankOfKind(kind, shape && shape.fields, locales)]);
+    onArrayChange(path, arr => [...arr, blankOfKind(kind, shape && shape.fields, locales)], "add item");
     onToast(
       kind === "object" && shape.fields.length
         ? "Item added — " + shape.fields.map(f => f.key).join(", ")
@@ -143,14 +150,14 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
                   laneCount={locales.length}
                   label={row.label}
                   onChange={v => onValueChange([...row.path, row.index], v)}
-                  onMove={(from, to) => onArrayChange(row.path, arr => arrayMove(arr, from, to))}
+                  onMove={(from, to) => onArrayChange(row.path, arr => arrayMove(arr, from, to), "move item")}
                   onDuplicate={i => {
-                    onArrayChange(row.path, arr => arrayInsert(arr, i + 1, arr[i]));
+                    onArrayChange(row.path, arr => arrayInsert(arr, i + 1, arr[i]), "duplicate item");
                     onToast("Item duplicated");
                   }}
                   onRemove={i => {
-                    onArrayChange(row.path, arr => arrayRemove(arr, i));
-                    onToast("Item removed");
+                    onArrayChange(row.path, arr => arrayRemove(arr, i), "remove item");
+                    onToast("Item removed — undo with " + undoKeys());
                   }}
                 />
               );
@@ -164,14 +171,14 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
                   total={row.total}
                   locales={locales}
                   hues={hues}
-                  onMove={(from, to) => onArrayChange(row.path, arr => arrayMove(arr, from, to))}
+                  onMove={(from, to) => onArrayChange(row.path, arr => arrayMove(arr, from, to), "move item")}
                   onDuplicate={i => {
-                    onArrayChange(row.path, arr => arrayInsert(arr, i + 1, JSON.parse(JSON.stringify(arr[i]))));
+                    onArrayChange(row.path, arr => arrayInsert(arr, i + 1, JSON.parse(JSON.stringify(arr[i]))), "duplicate item");
                     onToast("Item duplicated");
                   }}
                   onRemove={i => {
-                    onArrayChange(row.path, arr => arrayRemove(arr, i));
-                    onToast("Item removed");
+                    onArrayChange(row.path, arr => arrayRemove(arr, i), "remove item");
+                    onToast("Item removed — undo with " + undoKeys());
                   }}
                 />
               );

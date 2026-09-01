@@ -100,6 +100,8 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .btn--fill:active { transform: translateY(1px); }
 .btn--fill.is-done { background: var(--ok); }
 .kbd { font-family: var(--mono); font-size: 10.5px; opacity: 0.5; }
+.history { display: flex; gap: 2px; flex-shrink: 0; }
+.history .tool { width: 28px; height: 28px; }
 
 /* ── shell ───────────────────────────────────────────────────────────── */
 .shell { display: grid; grid-template-columns: 252px minmax(0, 1fr); align-items: start; }

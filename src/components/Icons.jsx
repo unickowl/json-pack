@@ -36,3 +36,10 @@ export const IconCheck = () => (
 export const IconAlert = () => (
   <svg viewBox="0 0 24 24" {...stroke} strokeWidth={1.8}><path d="M12 8v5M12 16.5v.5M12 3.5 2.5 20h19L12 3.5Z" /></svg>
 );
+
+export const IconUndo = () => (
+  <svg viewBox="0 0 24 24" {...stroke}><path d="M8.5 5 4 9.5 8.5 14" /><path d="M4 9.5h9A5.5 5.5 0 0 1 13 20.5H9.5" /></svg>
+);
+export const IconRedo = () => (
+  <svg viewBox="0 0 24 24" {...stroke}><path d="M15.5 5 20 9.5 15.5 14" /><path d="M20 9.5h-9A5.5 5.5 0 0 0 11 20.5h3.5" /></svg>
+);

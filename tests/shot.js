@@ -19,5 +19,12 @@ const click = el => el.dispatchEvent(new MouseEvent("click", { bubbles: true }))
   await wait(120);
   click([...$$(".btn--fill")].find(b => b.textContent.includes("Build")));
   await wait(300);
+  if (location.hash === "#edited") {
+    // make one edit so the undo control is live in the screenshot
+    const ta = $$(".row--field textarea")[0];
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(ta), "value").set.call(ta, "US$600M+ edited");
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
+    await wait(200);
+  }
   if (location.hash === "#raw") { click([...$$(".btn--line")].find(b => b.textContent.includes("Raw"))); await wait(500); }
 })();
