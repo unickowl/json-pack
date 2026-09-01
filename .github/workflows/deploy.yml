@@ -27,7 +27,10 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          # 26 is Current until it becomes LTS on 2026-10-28, and is supported
+          # to 2029-04-30 — the longest runway of any current line. This only
+          # sets the Node that runs the build, not the app's own runtime.
+          node-version: 26
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
