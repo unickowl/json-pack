@@ -37,6 +37,7 @@ export default function App() {
       return;
     }
     const locales = collectLocales(result.data);
+    // A document with no i18n leaves still needs one column to edit in.
     const usable = locales.length ? locales : ["value"];
     setError(null);
     setSession({
@@ -45,6 +46,7 @@ export default function App() {
       hues: hueMap(usable),
       shapes: collectShapes(result.data),
       originalKinds: collectKinds(result.data),
+      localised: locales.length > 0,
       notices: result.notices,
       name: "pasted_block.json",
     });
@@ -101,8 +103,8 @@ export default function App() {
 
   const status = useMemo(() => {
     if (!session) return null;
-    const { written, total } = documentStats(session.doc, session.locales);
-    if (!total) return { tone: "is-ok", label: "no strings" };
+    const { written, total, strings } = documentStats(session.doc, session.locales);
+    if (!total) return { tone: "is-ok", label: strings + (strings === 1 ? " value" : " values") };
     return written === total
       ? { tone: "is-ok", label: "complete" }
       : { tone: "is-warn", label: total - written + " empty" };

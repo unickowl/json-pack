@@ -70,7 +70,8 @@ export const ScalarRow = memo(function ScalarRow({ value, path, label, originalK
       </div>
       <div
         className={"lane lane--wide" + (issues.length ? " has-flag" : "")}
-        style={{ flex: laneCount + " 1 0" }}
+        data-lanes={laneCount}
+        style={{ flex: laneCount + " 1 0", "--lanes": laneCount }}
         title={changed ? "This field was a " + originalKind + ". It will be written as " + kind + "." : undefined}
       >
         <span className="spanhint">same for every locale</span>
@@ -84,17 +85,23 @@ export const ScalarRow = memo(function ScalarRow({ value, path, label, originalK
   );
 });
 
-export function Band({ name, count, shape, locales, hues, onAdd }) {
+export function Band({ name, count, shape }) {
+  const describe = () => {
+    if (!shape) return null;
+    if (shape.item === "object") return shape.fields.map(f => f.key).join(" · ");
+    return shape.item === "string" ? "text · not localised" : shape.item + " · not localised";
+  };
+  const description = describe();
   return (
     <div className="row row--band">
       <div className="c1">
         <h2>{humanize(name)}</h2>
         <span className="count">{count + (count === 1 ? " item" : " items")}</span>
         <span className="spacer" />
-        {shape.length > 0 && (
+        {description && (
           <>
             <span className="shape-label">Item shape</span>
-            <span className="shape">{shape.map(f => f.key).join(" · ")}</span>
+            <span className="shape">{description}</span>
           </>
         )}
       </div>
@@ -102,22 +109,61 @@ export function Band({ name, count, shape, locales, hues, onAdd }) {
   );
 }
 
+function Tools({ index, total, onMove, onDuplicate, onRemove }) {
+  const label = String(index + 1).padStart(2, "0");
+  return (
+    <div className="tools">
+      <button className="tool" title="Move up" aria-label={"Move item " + label + " up"} disabled={index === 0} onClick={() => onMove(index, index - 1)}><IconUp /></button>
+      <button className="tool" title="Move down" aria-label={"Move item " + label + " down"} disabled={index === total - 1} onClick={() => onMove(index, index + 1)}><IconDown /></button>
+      <button className="tool" title="Duplicate" aria-label={"Duplicate item " + label} onClick={() => onDuplicate(index)}><IconCopy /></button>
+      <button className="tool" title="Remove" aria-label={"Remove item " + label} onClick={() => onRemove(index)}><IconDelete /></button>
+    </div>
+  );
+}
+
+/**
+ * One element of a primitive array - a footnote, say. The controls sit in
+ * column 1 like every other control, and the value spans the locale lanes
+ * because the string is not localised.
+ */
+export const ListItemRow = memo(function ListItemRow({
+  value, index, total, itemKind, laneCount, label, onChange, onMove, onDuplicate, onRemove,
+}) {
+  const issues = formatIssues(value);
+  const text = value === null ? "null" : String(value);
+  return (
+    <div className="row row--listitem">
+      <div className="c1">
+        <span className="idx">{String(index + 1).padStart(2, "0")}</span>
+        <span className="spacer" />
+        <Tools index={index} total={total} onMove={onMove} onDuplicate={onDuplicate} onRemove={onRemove} />
+      </div>
+      <div
+        className={"lane lane--wide" + (text ? "" : " is-empty") + (issues.length ? " has-flag" : "")}
+        data-lanes={laneCount}
+        style={{ flex: laneCount + " 1 0", "--lanes": laneCount }}
+        title={issues.length ? "Contains " + issues.join(" and ") + "." : undefined}
+      >
+        <AutoTextarea
+          value={text}
+          aria-label={label.join(" ")}
+          onChange={v => onChange(coerce(v, itemKind))}
+        />
+      </div>
+    </div>
+  );
+});
+
 const Lanes = ({ locales, hues }) =>
   locales.map(code => <div key={code} className="lane" style={laneStyle(hues[code])} />);
 
 export function ItemStrip({ id, index, total, locales, hues, onMove, onDuplicate, onRemove }) {
-  const label = String(index + 1).padStart(2, "0");
   return (
     <div className="row row--strip" id={id}>
       <div className="c1">
-        <span className="idx">{label}</span>
+        <span className="idx">{String(index + 1).padStart(2, "0")}</span>
         <span className="spacer" />
-        <div className="tools">
-          <button className="tool" title="Move up" aria-label={"Move item " + label + " up"} disabled={index === 0} onClick={() => onMove(index, index - 1)}><IconUp /></button>
-          <button className="tool" title="Move down" aria-label={"Move item " + label + " down"} disabled={index === total - 1} onClick={() => onMove(index, index + 1)}><IconDown /></button>
-          <button className="tool" title="Duplicate" aria-label={"Duplicate item " + label} onClick={() => onDuplicate(index)}><IconCopy /></button>
-          <button className="tool" title="Remove" aria-label={"Remove item " + label} onClick={() => onRemove(index)}><IconDelete /></button>
-        </div>
+        <Tools index={index} total={total} onMove={onMove} onDuplicate={onDuplicate} onRemove={onRemove} />
       </div>
       <Lanes locales={locales} hues={hues} />
     </div>

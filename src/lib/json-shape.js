@@ -77,12 +77,28 @@ export function blankItem(shape, locales) {
   return out;
 }
 
-/** Every array's field shape, keyed by the array's path, captured at parse time. */
+/** A fresh value matching what an array already holds. */
+export function blankOfKind(kind, fields, locales) {
+  if (kind === "object") return blankItem(fields || [], locales);
+  if (kind === "number") return 0;
+  if (kind === "boolean") return false;
+  return "";
+}
+
+/**
+ * What each array holds, keyed by the array's path, captured at parse time so
+ * "Add item" keeps producing the same thing even after every item is deleted.
+ * Object arrays additionally carry their field shape.
+ */
 export function collectShapes(root) {
   const shapes = new Map();
   (function walk(node, path) {
     if (Array.isArray(node)) {
-      if (isItemArray(node)) shapes.set(path, readShape(node));
+      if (node.length) {
+        shapes.set(path, isItemArray(node)
+          ? { item: "object", fields: readShape(node) }
+          : { item: kindOf(node.find(v => v !== null && !isObj(v) && !Array.isArray(v))) });
+      }
       node.forEach((item, i) => walk(item, path + "[" + i + "]"));
       return;
     }
@@ -90,6 +106,14 @@ export function collectShapes(root) {
     Object.keys(node).forEach(k => walk(node[k], path ? path + "." + k : k));
   })(root, "");
   return shapes;
+}
+
+/** True when anything under this node is a localised leaf. */
+export function hasI18n(node) {
+  if (isI18n(node)) return true;
+  if (Array.isArray(node)) return node.some(hasI18n);
+  if (isObj(node)) return Object.values(node).some(hasI18n);
+  return false;
 }
 
 /** Original type of every leaf, so an edit can say "number → string". */

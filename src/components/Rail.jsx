@@ -1,4 +1,4 @@
-import { isI18n, isObj, humanize } from "../lib/json-shape.js";
+import { isI18n, isObj, hasI18n } from "../lib/json-shape.js";
 import { completeness } from "../lib/format.js";
 import { localeMeta, tint } from "../lib/locales.js";
 import { pathKey } from "../lib/rows.js";
@@ -21,7 +21,7 @@ function Dots({ node, locales, hues }) {
   );
 }
 
-export default function Rail({ doc, locales, hues, fieldCount, onJump }) {
+export default function Rail({ doc, locales, hues, fieldCount, localised, onJump }) {
   const nodes = [];
 
   Object.keys(doc).forEach(key => {
@@ -30,10 +30,11 @@ export default function Rail({ doc, locales, hues, fieldCount, onJump }) {
       nodes.push({ id: key, glyph: "[ ]", label: key + " · " + value.length, node: value });
       value.forEach((item, i) => {
         const title = isObj(item) && isI18n(item.title) ? item.title[locales[0]] : "";
+        const preview = typeof item === "string" ? item : "";
         nodes.push({
           id: key + "[" + i + "]",
           glyph: String(i + 1).padStart(2, "0"),
-          label: title || "item " + (i + 1),
+          label: title || preview || "item " + (i + 1),
           node: item,
           child: true,
           jump: pathKey([key]) + "[" + i + "]",
@@ -62,11 +63,14 @@ export default function Rail({ doc, locales, hues, fieldCount, onJump }) {
           >
             <span className="g">{n.glyph}</span>
             <span className="t">{n.label}</span>
-            <Dots node={n.node} locales={locales} hues={hues} />
+            {/* completeness dots are meaningless where nothing is localised */}
+            {hasI18n(n.node) && <Dots node={n.node} locales={locales} hues={hues} />}
           </button>
         ))}
       </nav>
-      <div className="rail-note">Each dot is one locale. Hollow means the string is still empty.</div>
+      {localised && (
+        <div className="rail-note">Each dot is one locale. Hollow means the string is still empty.</div>
+      )}
     </aside>
   );
 }

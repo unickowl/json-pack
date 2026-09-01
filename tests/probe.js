@@ -96,6 +96,75 @@ async function output() {
   log.push("6  diagnostics on bad paste  : " + ok($$(".errbox li").length > 0) +
     " hints=" + JSON.stringify($$(".errbox li").map(li => li.textContent.slice(0, 42))));
 
+  // ── footnotes: a plain string array the user can grow and shrink ────────
+  await restart();
+  click($(".link"));                                    // Load the example
+  await wait(120);
+  click([...$$(".btn--fill")].find(b => b.textContent.includes("Build")));
+  await wait(200);
+  let sample = JSON.parse(await output());
+  const DEFAULT_FOOTNOTE = "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates. It does not represent OwlTing's recognized revenue or realized processed volume.";
+  log.push("9  footnotes default present : " + ok(Array.isArray(sample.footnotes) && sample.footnotes.length === 1));
+  log.push("9  default text byte-exact   : " + ok(sample.footnotes[0] === DEFAULT_FOOTNOTE));
+  log.push("9  list rows rendered        : " + $$(".row--listitem").length + " " + ok($$(".row--listitem").length === 1));
+
+  // add two, and check they are strings rather than objects
+  // The add control sits in .row--add normally and in .row--empty once the
+  // array is empty, so find it by walking forward from its own band.
+  const addFor = name => {
+    const band = $$(".row--band").find(b => b.querySelector("h2").textContent.trim().toLowerCase() === name);
+    let n = band;
+    while ((n = n.nextElementSibling)) {
+      if (n.classList.contains("row--add") || n.classList.contains("row--empty")) return n.querySelector(".add");
+      if (n.classList.contains("row--band")) break;
+    }
+    return null;
+  };
+  const footAdd = () => addFor("footnotes");
+  click(footAdd()); await wait(90);
+  click(footAdd()); await wait(90);
+  sample = JSON.parse(await output());
+  log.push("9  add appends empty strings : " + ok(sample.footnotes.length === 3 && sample.footnotes.every(f => typeof f === "string")) +
+    " -> " + JSON.stringify(sample.footnotes.slice(1)));
+
+  // type into the third one, including a double quote
+  const footRows = $$(".row--listitem");
+  type(footRows[2].querySelector("textarea"), 'Second note with "quotes" and OwlTing’s apostrophe');
+  await wait(90);
+  sample = JSON.parse(await output());
+  log.push("9  typed footnote exact      : " + ok(sample.footnotes[2] === 'Second note with "quotes" and OwlTing’s apostrophe'));
+
+  // reorder: move the third up
+  click($$(".row--listitem")[2].querySelectorAll(".tool")[0]); await wait(90);
+  sample = JSON.parse(await output());
+  log.push("9  footnote move up          : " + ok(sample.footnotes[1].startsWith("Second note")));
+
+  // remove every footnote, then add one back
+  let fguard = 0;
+  while ($$(".row--listitem").length && fguard++ < 8) {
+    click($$(".row--listitem")[0].querySelectorAll(".tool")[3]);
+    await wait(70);
+  }
+  sample = JSON.parse(await output());
+  log.push("9  emptied to []             : " + ok(Array.isArray(sample.footnotes) && sample.footnotes.length === 0));
+  click(footAdd()); await wait(100);
+  sample = JSON.parse(await output());
+  log.push("9  re-add still a string     : " + ok(sample.footnotes.length === 1 && typeof sample.footnotes[0] === "string") +
+    " -> " + JSON.stringify(sample.footnotes));
+  log.push("9  content array untouched    : " + ok(sample.content.length === 2) + " (len=" + sample.content.length + ")");
+
+  // ── mixed array must not turn an object into "[object Object]" ──────────
+  await restart();
+  await paste('{"mixed":[{"title":{"en":"kept","zh_tw":"","ja":""}},"a plain string"]}');
+  const before = await output();
+  const mixedRows = $$(".row--listitem");
+  type(mixedRows[0].querySelector("textarea"), "edited string");
+  await wait(90);
+  const mixed = JSON.parse(await output());
+  log.push("10 mixed array object intact : " + ok(mixed.mixed[0] && mixed.mixed[0].title && mixed.mixed[0].title.en === "kept") +
+    " " + JSON.stringify(mixed.mixed).slice(0, 90));
+  log.push("10 no [object Object]        : " + ok(!before.includes("[object Object]") && !JSON.stringify(mixed).includes("[object Object]")));
+
   await restart();
   const imgs0 = $$("img").length;
   await paste('{"<img src=x onerror=window.__x1=1>":{"en":"k","zh_tw":"","ja":""},"section_title":{"en":"</span><img src=y onerror=window.__x2=1>","zh_tw":"<svg onload=window.__x3=1></svg>","ja":"z"}}');

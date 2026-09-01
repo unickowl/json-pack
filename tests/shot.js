@@ -6,7 +6,16 @@ const click = el => el.dispatchEvent(new MouseEvent("click", { bubbles: true }))
 (async () => {
   const t0 = Date.now();
   while (!$("#source") && Date.now() - t0 < 8000) await wait(50);
-  click($(".link"));
+  if (location.hash === "#footnotes") {
+    const doc = { footnotes: [
+      "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates.",
+      "" ] };
+    const el = $("#source");
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set.call(el, JSON.stringify(doc, null, 4));
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  } else {
+    click($(".link"));
+  }
   await wait(120);
   click([...$$(".btn--fill")].find(b => b.textContent.includes("Build")));
   await wait(300);

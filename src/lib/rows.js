@@ -1,4 +1,4 @@
-import { isI18n, isObj, isItemArray } from "./json-shape.js";
+import { isI18n, isObj } from "./json-shape.js";
 
 /** "content[0].tags" — the same key format collectShapes() uses. */
 export const pathKey = path =>
@@ -33,6 +33,12 @@ export function buildRows(node, path = [], labelPrefix = []) {
   return rows;
 }
 
+/**
+ * Decided per element, not per array: an array of objects gets a strip plus its
+ * own fields, an array of strings gets one editable row each, and a mixed array
+ * gets the right treatment for both. Dispatching per array would send an object
+ * down the scalar path, where String(value) turns it into "[object Object]".
+ */
 function buildArrayRows(arr, path, name, label) {
   const base = pathKey(path);
   const rows = [{ type: "band", key: base + ":band", path, name, count: arr.length }];
@@ -42,21 +48,25 @@ function buildArrayRows(arr, path, name, label) {
     return rows;
   }
 
-  const objectItems = isItemArray(arr);
   arr.forEach((item, index) => {
-    if (objectItems) {
+    const itemPath = [...path, index];
+    if (isObj(item)) {
       rows.push({ type: "strip", key: base + "[" + index + "]", path, index, total: arr.length });
-      rows.push(...buildRows(item, [...path, index]));
+      rows.push(...buildRows(item, itemPath));
+    } else if (Array.isArray(item)) {
+      rows.push(...buildArrayRows(item, itemPath, name + " " + (index + 1), [...label, String(index + 1)]));
     } else {
       rows.push({
-        type: "scalar",
+        type: "listitem",
         key: base + "[" + index + "]",
-        path: [...path, index],
+        path,
+        index,
+        total: arr.length,
         label: [...label, String(index + 1)],
       });
     }
   });
 
-  if (objectItems) rows.push({ type: "add", key: base + ":add", path, empty: false });
+  rows.push({ type: "add", key: base + ":add", path, empty: false });
   return rows;
 }

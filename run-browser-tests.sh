@@ -9,7 +9,7 @@ pnpm build >/dev/null
 python3 - "$@" <<'PY'
 import shutil, pathlib
 html = pathlib.Path("dist/index.html").read_text(encoding="utf-8")
-for name, script in (("test", "probe.js"), ("perf", "perf.js")):
+for name, script in (("test", "probe.js"), ("perf", "perf.js"), ("shot", "shot.js")):
     shutil.copy(f"tests/{script}", f"dist/{script}")
     pathlib.Path(f"dist/{name}.html").write_text(
         html.replace("</body>", f'<script src="./{script}"></script></body>'), encoding="utf-8")

@@ -1,10 +1,10 @@
 import { memo, useDeferredValue, useMemo } from "react";
-import { isI18n, isObj, kindOf, humanize, blankItem } from "../lib/json-shape.js";
+import { isI18n, kindOf, blankOfKind } from "../lib/json-shape.js";
 import { documentStats } from "../lib/format.js";
 import { localeMeta, tint } from "../lib/locales.js";
 import { buildRows, pathKey } from "../lib/rows.js";
 import { getIn, arrayInsert, arrayRemove, arrayMove } from "../lib/immutable.js";
-import { FieldRow, ScalarRow, Band, ItemStrip, AddRow } from "./Rows.jsx";
+import { FieldRow, ScalarRow, ListItemRow, Band, ItemStrip, AddRow } from "./Rows.jsx";
 import Rail from "./Rail.jsx";
 import { IconAlert } from "./Icons.jsx";
 
@@ -13,7 +13,7 @@ const MemoRail = memo(Rail);
 const stripId = (path, index) => "item-" + pathKey(path).replace(/[^\w]/g, "-") + "-" + index;
 
 export default function Editor({ session, onValueChange, onArrayChange, onToast }) {
-  const { doc, locales, hues, shapes, originalKinds, notices } = session;
+  const { doc, locales, hues, shapes, originalKinds, notices, localised } = session;
 
   const rows = useMemo(() => buildRows(doc), [doc]);
 
@@ -29,12 +29,17 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
     return settled[key][locales[0]] || Object.values(settled[key]).find(Boolean) || "Untitled block";
   }, [settled, locales]);
 
-  const shapeFor = path => shapes.get(pathKey(path)) || [];
+  const shapeFor = path => shapes.get(pathKey(path)) || null;
 
   const addItem = path => {
     const shape = shapeFor(path);
-    onArrayChange(path, arr => [...arr, blankItem(shape, locales)]);
-    onToast(shape.length ? "Item added — " + shape.map(f => f.key).join(", ") : "Item added");
+    const kind = shape ? shape.item : "string";
+    onArrayChange(path, arr => [...arr, blankOfKind(kind, shape && shape.fields, locales)]);
+    onToast(
+      kind === "object" && shape.fields.length
+        ? "Item added — " + shape.fields.map(f => f.key).join(", ")
+        : "Item added"
+    );
   };
 
   const jump = key => {
@@ -44,26 +49,31 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
 
   return (
     <div className="shell">
-      <MemoRail doc={settled} locales={locales} hues={hues} fieldCount={stats.fields} onJump={jump} />
+      <MemoRail doc={settled} locales={locales} hues={hues} fieldCount={stats.fields} localised={localised} onJump={jump} />
       <main>
         <div className="head">
           <div>
             <div className="eyebrow" style={{ marginBottom: 9 }}>Document</div>
             <h1>{title}</h1>
             <p>
-              {stats.fields} translatable fields · {locales.length} locales ·{" "}
-              {stats.written} of {stats.total} strings written
+              {localised
+                ? stats.fields + " translatable fields · " + locales.length + " locales · " +
+                  stats.written + " of " + stats.total + " strings written"
+                : "Nothing in this document is localised · " + stats.strings +
+                  (stats.strings === 1 ? " text value" : " text values")}
               {stats.flagged ? " · " + stats.flagged + " with invisible characters" : ""}
             </p>
           </div>
-          <div className="legend">
-            {locales.map(code => (
-              <span key={code} style={{ color: hues[code] }}>
-                <i style={{ background: hues[code] }} />
-                <span>{localeMeta(code).name}</span>
-              </span>
-            ))}
-          </div>
+          {localised && (
+            <div className="legend">
+              {locales.map(code => (
+                <span key={code} style={{ color: hues[code] }}>
+                  <i style={{ background: hues[code] }} />
+                  <span>{localeMeta(code).name}</span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {notices.map((text, i) => (
@@ -76,9 +86,15 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
         <div className="thead">
           <div className="h h--label">Field</div>
           {locales.map(code => (
-            <div key={code} className="h h--lane" style={{ background: tint(hues[code], 0.03), color: hues[code] }}>
-              <span>{code}</span>
-              <em>{localeMeta(code).name}</em>
+            <div key={code} className="h h--lane" style={localised ? { background: tint(hues[code], 0.03), color: hues[code] } : undefined}>
+              {localised ? (
+                <>
+                  <span>{code}</span>
+                  <em>{localeMeta(code).name}</em>
+                </>
+              ) : (
+                <span>Value</span>
+              )}
             </div>
           ))}
         </div>
@@ -113,14 +129,29 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
               );
             }
             if (row.type === "band") {
+              return <Band key={row.key} name={row.name} count={row.count} shape={shapeFor(row.path)} />;
+            }
+            if (row.type === "listitem") {
+              const shape = shapeFor(row.path);
               return (
-                <Band
+                <ListItemRow
                   key={row.key}
-                  name={row.name}
-                  count={row.count}
-                  shape={shapeFor(row.path)}
-                  locales={locales}
-                  hues={hues}
+                  value={getIn(doc, [...row.path, row.index])}
+                  index={row.index}
+                  total={row.total}
+                  itemKind={shape ? shape.item : "string"}
+                  laneCount={locales.length}
+                  label={row.label}
+                  onChange={v => onValueChange([...row.path, row.index], v)}
+                  onMove={(from, to) => onArrayChange(row.path, arr => arrayMove(arr, from, to))}
+                  onDuplicate={i => {
+                    onArrayChange(row.path, arr => arrayInsert(arr, i + 1, arr[i]));
+                    onToast("Item duplicated");
+                  }}
+                  onRemove={i => {
+                    onArrayChange(row.path, arr => arrayRemove(arr, i));
+                    onToast("Item removed");
+                  }}
                 />
               );
             }

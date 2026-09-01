@@ -12,4 +12,7 @@ export const SAMPLE = {
       paragraph_2: { en: "As of June 2026", zh_tw: "測試", ja: "" },
     },
   ],
+  footnotes: [
+    "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates. It does not represent OwlTing's recognized revenue or realized processed volume.",
+  ],
 };

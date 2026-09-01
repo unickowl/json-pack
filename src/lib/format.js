@@ -16,9 +16,10 @@ export const formatIssues = value =>
   typeof value === "string" ? FLAGS.filter(([re]) => re.test(value)).map(([, label]) => label) : [];
 
 export function documentStats(root, locales) {
-  let fields = 0, written = 0, total = 0, flagged = 0;
+  let fields = 0, written = 0, total = 0, flagged = 0, strings = 0;
   (function walk(node) {
     if (typeof node === "string") {
+      strings += 1;
       if (formatIssues(node).length) flagged += 1;
       return;
     }
@@ -34,7 +35,7 @@ export function documentStats(root, locales) {
     if (Array.isArray(node)) node.forEach(walk);
     else if (isObj(node)) Object.values(node).forEach(walk);
   })(root);
-  return { fields, written, total, flagged };
+  return { fields, written, total, flagged, strings };
 }
 
 /** Per-locale completeness for the structure rail: filled dot or hollow dot. */
