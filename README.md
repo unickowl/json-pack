@@ -11,6 +11,14 @@ pnpm build      # -> dist/
 pnpm preview    # serve the build
 ```
 
+Node 26 (`.node-version`), matching `node-version: 26` in the deploy workflow. fnm, nvm and
+asdf all read that file, and with fnm's `--use-on-cd` the switch happens on `cd`. `engines` in
+`package.json` states the same thing; pnpm treats a mismatch as a warning rather than an error,
+so an older Node still builds — it just tells you it is not what the project expects.
+
+The build output is byte-identical on Node 22 and Node 26 (same bundle hash locally and in CI),
+so the version is about staying aligned with CI, not about the artifact differing.
+
 ## Deploying
 
 Pushing to `main` runs `.github/workflows/deploy.yml`, which builds with pnpm and publishes
