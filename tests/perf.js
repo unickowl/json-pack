@@ -13,8 +13,8 @@ const click = el => el.dispatchEvent(new MouseEvent("click", { bubbles: true }))
 
 (async () => {
   const t0 = Date.now();
-  while (!$("#source") && Date.now() - t0 < 8000) await wait(50);
-  if (!$("#source")) return;
+  while (!$(".cm-content") && Date.now() - t0 < 8000) await wait(50);
+  if (!$(".cm-content")) return;
 
   const N = Number(new URLSearchParams(location.search).get("n") || 400);
   const big = { content: Array.from({ length: N }, (_, i) => ({
@@ -22,8 +22,13 @@ const click = el => el.dispatchEvent(new MouseEvent("click", { bubbles: true }))
     paragraph_1: { en: "x".repeat(200), zh_tw: "測試", ja: "力口" },
     paragraph_2: { en: "y".repeat(200), zh_tw: "測試", ja: "力口" } })) };
 
-  type($("#source"), JSON.stringify(big));
-  await wait(60);
+  const content = $(".cm-content");
+  content.focus();
+  document.execCommand("selectAll");
+  const data = new DataTransfer();
+  data.setData("text/plain", JSON.stringify(big));
+  content.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+  await wait(200);
   click([...$$(".btn--fill")].find(b => b.textContent.includes("Build")));
   await wait(500);
 

@@ -52,25 +52,58 @@ const CAUSES = [
   [/[{,]\s*[A-Za-z_$][\w$]*\s*:/, "Property names have to be wrapped in double quotes."],
 ];
 
+/**
+ * Where the syntax error is. V8 reports two different shapes and only one of
+ * them carries an offset:
+ *
+ *   Expected double-quoted property name in JSON at position 16 (line 1 column 17)
+ *   Unexpected token ',', ..."    "ja": ,\n    }\n}" is not valid JSON
+ *
+ * The second embeds a slice of the source instead, so the offset is recovered
+ * by locating that slice. Taking the position as 0 when it is absent — which is
+ * what a plain /position (\d+)/ does — points every such error at line 1.
+ */
+export function errorPosition(text, error) {
+  const at = /at position (\d+)/.exec(error.message);
+  if (at) return Math.min(Number(at[1]), text.length);
+
+  if (/Unexpected end of JSON input/.test(error.message)) return text.length;
+
+  const shape = /^Unexpected token (.+?), (?:\.\.\.)?"([\s\S]*?)"(?:\.\.\.)? is not valid JSON$/.exec(error.message);
+  if (shape) {
+    const token = shape[1].replace(/^'|'$/g, "");
+    const snippet = shape[2];
+    const base = text.indexOf(snippet);
+    if (base >= 0) {
+      const within = snippet.indexOf(token);
+      return within >= 0 ? base + within : base;
+    }
+  }
+  return 0;
+}
+
+/** Line and column of an offset, 1-based, for display. */
+export function lineColumn(text, position) {
+  const before = text.slice(0, position);
+  const line = before.split("\n").length;
+  return { line, column: position - (before.lastIndexOf("\n") + 1) + 1 };
+}
+
 function diagnose(text, error) {
   const hints = [];
   CAUSES.forEach(([re, hint]) => { if (re.test(text)) hints.push(hint); });
   if (/'/.test(text) && !/"/.test(text)) hints.push("JSON strings need double quotes, not single quotes.");
 
-  let snippet = "";
-  const at = /position (\d+)/.exec(error.message);
-  if (at) {
-    const pos = Number(at[1]);
-    const before = text.slice(0, pos);
-    const line = before.split("\n").length;
-    const col = pos - (before.lastIndexOf("\n") + 1);
-    const lineText = text.split("\n")[line - 1] || "";
-    const from = Math.max(0, col - 40);
-    snippet =
-      "line " + line + ", column " + (col + 1) + "\n" +
-      lineText.slice(from, col + 40) + "\n" +
-      " ".repeat(col - from) + "^";
-  }
+  const pos = errorPosition(text, error);
+  const { line, column } = lineColumn(text, pos);
+  const lineText = text.split("\n")[line - 1] || "";
+  const col = column - 1;
+  const from = Math.max(0, col - 40);
+  const snippet =
+    "line " + line + ", column " + column + "\n" +
+    lineText.slice(from, col + 40) + "\n" +
+    " ".repeat(col - from) + "^";
+
   return { hints, snippet };
 }
 

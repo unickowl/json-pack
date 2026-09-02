@@ -1,7 +1,8 @@
 import { useState } from "react";
+import JsonEditor from "./JsonEditor.jsx";
 
 // The shape this tool expects, in one glance: a localised field, an array of
-// records, and an array of localised values. Kept in step with SAMPLE.
+// records, and an array of localised values.
 const PLACEHOLDER = `{
     "section_title": { "en": "…", "zh_tw": "…", "ja": "…" },
     "content": [
@@ -12,7 +13,7 @@ const PLACEHOLDER = `{
     ]
 }`;
 
-export default function PasteScreen({ error, sample, onParse }) {
+export default function PasteScreen({ error, onParse }) {
   const [text, setText] = useState("");
 
   return (
@@ -32,20 +33,10 @@ export default function PasteScreen({ error, sample, onParse }) {
             <span className="eyebrow">{text.length.toLocaleString()} characters</span>
           </div>
 
-          <label className="visually-hidden" htmlFor="source">JSON source</label>
-          <textarea
-            id="source"
-            spellCheck={false}
-            placeholder={PLACEHOLDER}
-            value={text}
-            onChange={e => setText(e.target.value)}
-          />
+          <JsonEditor value={text} placeholder={PLACEHOLDER} onChange={setText} />
 
           <div className="dz-bot">
             <button className="btn btn--fill" onClick={() => onParse(text)}>Build the table</button>
-            <button className="link" onClick={() => setText(JSON.stringify(sample, null, 4))}>
-              Load the example
-            </button>
           </div>
 
           {error && (

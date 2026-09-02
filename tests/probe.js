@@ -1,5 +1,28 @@
 
 // Drives the built app through a browser and reports to a #PROBE block.
+const SAMPLE = {
+  section_title: { en: "Live Infrastructure, In Numbers", zh_tw: "測試", ja: "力口" },
+  content: [
+    {
+      title: { en: "US$600M+", zh_tw: "測試", ja: "力口" },
+      paragraph_1: { en: "Cumulative Gross Payment Volume Processed", zh_tw: "測試", ja: "力口" },
+      paragraph_2: { en: "Since inception through June 2026", zh_tw: "測試", ja: "力口" },
+    },
+    {
+      title: { en: "60+", zh_tw: "測試", ja: "力口" },
+      paragraph_1: { en: "Active Stablecoin Clients", zh_tw: "", ja: "力口" },
+      paragraph_2: { en: "As of June 2026", zh_tw: "測試", ja: "" },
+    },
+  ],
+  footnotes: [
+    {
+      en: "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates. It does not represent OwlTing's recognized revenue or realized processed volume.",
+      zh_tw: "",
+      ja: "",
+    },
+  ],
+};
+
 const log = [];
 const ok = b => (b ? "PASS" : "**FAIL**");
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -20,10 +43,23 @@ function type(el, value) {
 const click = el => el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
 async function restart() { const b = $(".btn--quiet"); if (b) { click(b); await wait(80); } }
+
+/**
+ * The source surface is a CodeMirror editor, not a textarea, so the test does
+ * what a person does: focus it, select whatever is there, and paste over it.
+ */
+function pasteInto(editorContent, text) {
+  editorContent.focus();
+  document.execCommand("selectAll");
+  const data = new DataTransfer();
+  data.setData("text/plain", text);
+  editorContent.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+}
+
 async function paste(text) {
-  if (!$("#source")) await restart();
-  type($("#source"), text);
-  await wait(30);
+  if (!$(".cm-content")) await restart();
+  pasteInto($(".cm-content"), text);
+  await wait(60);
   click([...$$(".btn--fill")].find(b => b.textContent.includes("Build")));
   await wait(150);
 }
@@ -35,17 +71,43 @@ async function output() {
 
 (async () => {
  try {
-  const mounted = await until(() => $("#source"));
+  const mounted = await until(() => $(".cm-content"));
   log.push("0  app mounted                : " + ok(mounted));
   if (!mounted) throw new Error("app never mounted");
 
   // The example on screen has to describe the shape the tool actually expects.
-  const ph = $("#source").placeholder;
+  const ph = ($(".cm-placeholder") || { textContent: "" }).textContent;
+  log.push("0  placeholder is shown       : " + ok(!!$(".cm-placeholder")));
+  log.push("0  load-example button gone   : " + ok(!$(".link")));
+  log.push("0  editor is not a textarea   : " + ok(!$("#source") && !!$(".cm-editor")));
   log.push("0  placeholder shows locales  : " + ok(["en", "zh_tw", "ja"].every(l => ph.includes('"' + l + '"'))));
   log.push("0  placeholder shows arrays   : " + ok(ph.includes('"content"') && ph.includes('"footnotes"')));
   log.push("0  placeholder is valid JSON  : " + ok((() => {
     try { JSON.parse(ph.replace(/…/g, "x")); return true; } catch (e) { return false; }
   })()));
+
+  // The editor must mark a syntax error in place, and must not mark an
+  // untouched document as broken.
+  log.push("0  empty doc not marked bad   : " + ok($$(".cm-lintRange-error").length === 0 && $$(".cm-lint-marker-error").length === 0));
+
+  // V8 reports this shape of error without an offset, so a linter that reads
+  // the offset out of the message would put the marker on line 1.
+  pasteInto($(".cm-content"), '{\n    "a": {\n        "en": "x",\n        "ja": ,\n    }\n}');
+  await wait(1400);   // the linter runs on a delay
+  const markerLine = () => {
+    const marker = $(".cm-lint-marker-error");
+    if (!marker) return "-";
+    const top = n => Math.round(n.getBoundingClientRect().top);
+    const nums = $$(".cm-lineNumbers .cm-gutterElement").filter(e => /^\d+$/.test(e.textContent));
+    return nums.reduce((best, e) => Math.abs(top(e) - top(marker)) < Math.abs(top(best) - top(marker)) ? e : best, nums[0]).textContent;
+  };
+  log.push("0  error marked on right line : " + ok(markerLine() === "4") + " (marker on line " + markerLine() + ", error is on 4)");
+  log.push("0  offending token underlined : " + JSON.stringify(($(".cm-lintRange-error") || {textContent:""}).textContent) +
+    " " + ok(($(".cm-lintRange-error") || {textContent:""}).textContent === ","));
+
+  pasteInto($(".cm-content"), '{"a": {"en": "x"}}');
+  await wait(1400);
+  log.push("0  marker clears when fixed   : " + ok($$(".cm-lintRange-error").length === 0 && $$(".cm-lint-marker-error").length === 0));
 
   const NBSP = String.fromCharCode(0xA0), ZWSP = String.fromCharCode(0x200B), BOM = String.fromCharCode(0xFEFF), CTRL = String.fromCharCode(1);
 
@@ -106,10 +168,7 @@ async function output() {
 
   // ── footnotes: an array of localised values, side by side ───────────────
   await restart();
-  click($(".link"));                                    // Load the example
-  await wait(120);
-  click([...$$(".btn--fill")].find(b => b.textContent.includes("Build")));
-  await wait(220);
+  await paste(JSON.stringify(SAMPLE, null, 4));
   let sample = JSON.parse(await output());
   const DEFAULT_FOOTNOTE = "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates. It does not represent OwlTing's recognized revenue or realized processed volume.";
   log.push("9  footnotes default present : " + ok(Array.isArray(sample.footnotes) && sample.footnotes.length === 1));
@@ -272,12 +331,16 @@ async function output() {
   log.push("10 no [object Object]        : " + ok(!before.includes("[object Object]") && !JSON.stringify(mixed).includes("[object Object]")));
 
   await restart();
-  const imgs0 = $$("img").length;
+  // Count elements that only a successful injection would create. Counting all
+  // <img> instead would measure CodeMirror's own zero-size cm-widgetBuffer,
+  // which exists only while the placeholder widget is shown.
+  // No script[src] here: the page's own bundle and this probe both match it.
+  const injected = () => $$("img[src], iframe, object, embed").length;
   await paste('{"<img src=x onerror=window.__x1=1>":{"en":"k","zh_tw":"","ja":""},"section_title":{"en":"</span><img src=y onerror=window.__x2=1>","zh_tw":"<svg onload=window.__x3=1></svg>","ja":"z"}}');
   await output();
-  log.push("7  no injection              : newImgs=" + ($$("img").length - imgs0) +
-    " flags=" + [1,2,3].map(i => window["__x" + i] ? "FIRED" : "0").join(",") +
-    " " + ok($$("img").length === imgs0 && !window.__x1 && !window.__x2 && !window.__x3));
+  log.push("7  no injection              : injected=" + injected() +
+    " flags=" + [1, 2, 3].map(i => window["__x" + i] ? "FIRED" : "0").join(",") +
+    " " + ok(injected() === 0 && !window.__x1 && !window.__x2 && !window.__x3));
   log.push("7  prototype clean           : " + ok(({}).en === undefined && ({}).constructor === Object));
 
   // ── the inconsistency check that should have caught footnotes ───────────

@@ -10,7 +10,6 @@ import {
   initHistory, applyChange, undo as undoHistory, redo as redoHistory,
   canUndo, canRedo, undoLabel, redoLabel,
 } from "./lib/history.js";
-import { SAMPLE } from "./sample.js";
 import TopBar from "./components/TopBar.jsx";
 import PasteScreen from "./components/PasteScreen.jsx";
 import Editor from "./components/Editor.jsx";
@@ -199,7 +198,7 @@ export default function App() {
           onToast={showToast}
         />
       ) : (
-        <PasteScreen error={error} sample={SAMPLE} onParse={handleParse} />
+        <PasteScreen error={error} onParse={handleParse} />
       )}
 
       <RawPanel

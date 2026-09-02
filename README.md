@@ -58,6 +58,32 @@ the full width; every other control lives in column 1, so the locale lanes run u
 the page. Breaking that rule is what made an earlier draft read as misaligned even though the
 grid was pixel-exact.
 
+## The source editor
+
+The paste step is a CodeMirror 6 editor rather than a textarea: JSON syntax highlighting,
+bracket matching, auto-indent, folding, line numbers, and a syntax error underlined at the
+character it occurs on while you type. There is no "load the example" button — the placeholder
+is the example.
+
+Two things worth recording about it:
+
+- **Its linter is ours, not the package's.** V8 reports syntax errors in two shapes and only
+  one carries an offset: `… in JSON at position 16 (line 1 column 17)`, versus
+  `Unexpected token ',', ..."…" is not valid JSON`, which embeds a slice of the source instead.
+  `jsonParseLinter` reads the offset out of the message, so every error of the second shape
+  lands on line 1. `errorPosition()` in `src/lib/parse.js` recovers the offset by locating that
+  slice, and both the editor's inline marker and the error panel use it, so they always point
+  at the same character. The same bug was in this app's own error panel until the editor
+  exposed it.
+- **It costs about 350 kB.** The bundle went from 216 kB to 569 kB raw, 69 kB to 183 kB gzip.
+  That is the floor for CodeMirror with JSON language support and linting; trimming optional
+  extensions saved 8 kB. Monaco unpacks to 93 MB and `vanilla-jsoneditor` to 9.8 MB, and the
+  latter's tree view would have duplicated the table editor this app already is.
+
+The output preview deliberately stays a hand-rolled token renderer. CodeMirror virtualises its
+viewport, so only the visible lines exist in the DOM — which would break the clipboard
+fallback, where the whole document has to be selectable when the browser blocks a copy.
+
 ## Behaviour worth knowing
 
 - **Item shape is fixed.** Each array's field shape is captured at parse time, so adding an
@@ -119,6 +145,8 @@ grid was pixel-exact.
   keystroke re-renders only its own cell.
 - No draft persistence. Reloading loses the document — deliberate, since nothing is written to
   storage without asking.
+- The bundle is 183 kB gzip, most of it the source editor. Fine over a fast connection for a
+  tool used a few times a day; not something to ship on a landing page.
 
 ## Tests
 

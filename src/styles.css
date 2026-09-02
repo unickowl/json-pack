@@ -278,11 +278,8 @@ main { min-width: 0; padding: 26px 30px 140px; max-width: 1320px; }
 .dz { background: var(--card); border-radius: 14px; box-shadow: inset 0 0 0 1px var(--line), var(--sh2); overflow: hidden; }
 .dz.is-bad { box-shadow: inset 0 0 0 1px #d8695a, var(--sh2); }
 .dz-top { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line2); }
-.dz textarea {
-  display: block; width: 100%; min-height: 250px; border: 0; resize: vertical; padding: 16px;
-  font-family: var(--mono); font-size: 12.5px; line-height: 1.7; color: var(--ink); background: transparent;
-}
-.dz textarea:focus { outline: 0; }
+.cm-host { display: block; overflow: hidden; }
+.cm-host .cm-editor { background: transparent; }
 .dz-bot { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line2); background: #fcfcfd; }
 .errbox { border-top: 1px solid #f0d9d5; background: #fcf4f3; padding: 12px 14px; }
 .errbox .err { margin: 0 0 8px; color: var(--bad); font-family: var(--ui); font-weight: 600; font-size: 12.5px; }
