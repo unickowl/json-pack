@@ -39,6 +39,14 @@ async function output() {
   log.push("0  app mounted                : " + ok(mounted));
   if (!mounted) throw new Error("app never mounted");
 
+  // The example on screen has to describe the shape the tool actually expects.
+  const ph = $("#source").placeholder;
+  log.push("0  placeholder shows locales  : " + ok(["en", "zh_tw", "ja"].every(l => ph.includes('"' + l + '"'))));
+  log.push("0  placeholder shows arrays   : " + ok(ph.includes('"content"') && ph.includes('"footnotes"')));
+  log.push("0  placeholder is valid JSON  : " + ok((() => {
+    try { JSON.parse(ph.replace(/…/g, "x")); return true; } catch (e) { return false; }
+  })()));
+
   const NBSP = String.fromCharCode(0xA0), ZWSP = String.fromCharCode(0x200B), BOM = String.fromCharCode(0xFEFF), CTRL = String.fromCharCode(1);
 
   const nasty = { section_title: { en: 'He said: "hi" \\ back\\slash /slash', zh_tw: "line1\nline2\ttabbed", ja: "rocket \u{1D546} nbsp" + NBSP + "x zwsp" + ZWSP + "y" },

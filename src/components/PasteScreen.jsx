@@ -1,10 +1,15 @@
 import { useState } from "react";
 
+// The shape this tool expects, in one glance: a localised field, an array of
+// records, and an array of localised values. Kept in step with SAMPLE.
 const PLACEHOLDER = `{
-    "section_title": {
-        "en": "…",
-        "zh_tw": "…"
-    }
+    "section_title": { "en": "…", "zh_tw": "…", "ja": "…" },
+    "content": [
+        { "title": { "en": "…", "zh_tw": "…", "ja": "…" } }
+    ],
+    "footnotes": [
+        { "en": "…", "zh_tw": "…", "ja": "…" }
+    ]
 }`;
 
 export default function PasteScreen({ error, sample, onParse }) {
