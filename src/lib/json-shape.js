@@ -91,21 +91,28 @@ export function blankOfKind(kind, fields, locales) {
 }
 
 /**
- * What each array holds, keyed by the array's path, captured at parse time so
- * "Add item" keeps producing the same thing even after every item is deleted.
- * Object arrays additionally carry their field shape.
+ * What an array holds. An element that is itself an i18n leaf is one localised
+ * value, not a record of fields, so it gets a row with the locale columns
+ * filled rather than one row per locale.
+ */
+export function describeArray(arr) {
+  if (!arr.length) return null;
+  if (arr.every(isI18n)) return { item: "i18n" };
+  if (isItemArray(arr)) return { item: "object", fields: readShape(arr) };
+  return { item: kindOf(arr.find(v => v !== null && !isObj(v) && !Array.isArray(v))) };
+}
+
+/**
+ * Array descriptions captured at parse time, keyed by path. Only consulted for
+ * an array that is currently empty: while it has contents the description is
+ * derived live, so converting an array does not leave a stale shape behind.
  */
 export function collectShapes(root) {
   const shapes = new Map();
   (function walk(node, path) {
     if (Array.isArray(node)) {
-      if (node.length) {
-        // An element that is itself an i18n leaf is one localised value, not a
-        // record of fields — it gets a row with the locale columns filled.
-        if (node.every(isI18n)) shapes.set(path, { item: "i18n" });
-        else if (isItemArray(node)) shapes.set(path, { item: "object", fields: readShape(node) });
-        else shapes.set(path, { item: kindOf(node.find(v => v !== null && !isObj(v) && !Array.isArray(v))) });
-      }
+      const described = describeArray(node);
+      if (described) shapes.set(path, described);
       node.forEach((item, i) => walk(item, path + "[" + i + "]"));
       return;
     }
@@ -113,6 +120,36 @@ export function collectShapes(root) {
     Object.keys(node).forEach(k => walk(node[k], path ? path + "." + k : k));
   })(root, "");
   return shapes;
+}
+
+/**
+ * Prose, as opposed to a tag or an id: a plain string list of sentences in an
+ * otherwise localised document is usually a modelling mistake, whereas
+ * ["fintech", "stablecoin"] is usually exactly what was meant.
+ */
+const looksLikeProse = v => typeof v === "string" && (v.includes(" ") || v.length > 40);
+
+export const isUnlocalisedTextArray = arr =>
+  Array.isArray(arr) && arr.length > 0 && arr.every(v => typeof v === "string") && arr.some(looksLikeProse);
+
+/**
+ * Arrays of plain prose strings in a document whose other values are localised.
+ * Every content field carrying its own locale map while one array does not is
+ * the kind of inconsistency worth raising before it ships.
+ */
+export function findUnlocalisedTextArrays(root) {
+  if (!hasI18n(root)) return [];
+  const hits = [];
+  (function walk(node, path) {
+    if (Array.isArray(node)) {
+      if (isUnlocalisedTextArray(node)) hits.push(path || "root");
+      node.forEach((item, i) => walk(item, path + "[" + i + "]"));
+      return;
+    }
+    if (!isObj(node)) return;
+    Object.keys(node).forEach(k => walk(node[k], path ? path + "." + k : k));
+  })(root, "");
+  return hits;
 }
 
 /** True when anything under this node is a localised leaf. */

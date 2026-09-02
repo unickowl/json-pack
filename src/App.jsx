@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseSource } from "./lib/parse.js";
-import { collectShapes, collectKinds } from "./lib/json-shape.js";
+import { collectShapes, collectKinds, findUnlocalisedTextArrays } from "./lib/json-shape.js";
 import { collectLocales, hueMap } from "./lib/locales.js";
 import { documentStats } from "./lib/format.js";
 import { setIn, getIn } from "./lib/immutable.js";
@@ -51,13 +51,25 @@ export default function App() {
     // A document with no i18n leaves still needs one column to edit in.
     const usable = locales.length ? locales : ["value"];
     setError(null);
+
+    // Every content value carrying its own locale map while one array does not
+    // is worth raising before it ships, not after.
+    const notices = [...result.notices];
+    const shapeHint = "[{ " + usable.map(l => '"' + l + '": ""').join(", ") + " }]";
+    findUnlocalisedTextArrays(result.data).forEach(path => {
+      notices.push(
+        path + " holds plain strings while the rest of this document is localised. " +
+        "Did you mean " + shapeHint + "? Use \u201cMake localised\u201d on the array to convert it."
+      );
+    });
+
     setMeta({
       locales: usable,
       hues: hueMap(usable),
       shapes: collectShapes(result.data),
       originalKinds: collectKinds(result.data),
       localised: locales.length > 0,
-      notices: result.notices,
+      notices,
       name: "pasted_block.json",
     });
     setHistory(initHistory(result.data));

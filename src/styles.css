@@ -258,6 +258,8 @@ main { min-width: 0; padding: 26px 30px 140px; max-width: 1320px; }
   transition: color 0.12s, box-shadow 0.12s;
 }
 .add:hover { color: var(--cobalt); box-shadow: inset 0 0 0 1px rgba(27, 79, 224, 0.4); }
+.add--fix { margin-left: 12px; color: var(--warn); box-shadow: inset 0 0 0 1px #e3cba4; }
+.add--fix:hover { color: var(--warn); background: #fdf6ea; box-shadow: inset 0 0 0 1px var(--warn); }
 .add svg { width: 13px; height: 13px; }
 .row--empty .c1 { color: var(--ink3); font-size: 12.5px; gap: 12px; min-height: 44px; }
 .row--item .c1 { gap: 9px; align-items: flex-start; }

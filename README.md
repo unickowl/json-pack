@@ -92,6 +92,15 @@ grid was pixel-exact.
   would be the less reliable option.
 - **Copy never lies.** If the clipboard is blocked or hangs, the output panel opens with the
   JSON selected and an error is shown — no false success.
+- **An unlocalised prose array is questioned.** If every other value carries its own locale
+  map and one array holds bare strings, that is usually a modelling mistake, so the document
+  says so on parse and the array's band offers **Make localised** — one undoable step that moves
+  each string into the first locale and blanks the rest. The heuristic only fires on prose (a
+  string containing a space, or longer than 40 characters), so `["fintech", "stablecoin"]` is
+  left alone, and it never fires on a document with no localised values at all.
+
+  This check exists because the tool's own `footnotes` was first built as a bare string array
+  while every neighbouring field was localised, and nothing pointed out the contradiction.
 - **Problems are surfaced, not swallowed.** Duplicate keys, number-like keys (which JavaScript
   reorders), and a leading byte-order mark all produce a notice. Invisible characters
   (leading/trailing whitespace, NBSP, zero-width, control characters) are flagged per cell.

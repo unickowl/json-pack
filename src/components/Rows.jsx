@@ -192,7 +192,7 @@ const SHAPE_TEXT = {
   boolean: "true or false · not localised",
 };
 
-export function Band({ name, count, shape }) {
+export function Band({ name, count, shape, onLocalise }) {
   const description = shape
     ? shape.item === "object"
       ? shape.fields.map(f => f.key).join(" · ")
@@ -209,6 +209,11 @@ export function Band({ name, count, shape }) {
             <span className="shape-label">Item shape</span>
             <span className="shape">{description}</span>
           </>
+        )}
+        {onLocalise && (
+          <button className="add add--fix" onClick={onLocalise} title="Give every entry a value per locale">
+            Make localised
+          </button>
         )}
       </div>
     </div>

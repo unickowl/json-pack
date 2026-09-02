@@ -1,5 +1,5 @@
 import { memo, useDeferredValue, useMemo } from "react";
-import { isI18n, kindOf, blankOfKind } from "../lib/json-shape.js";
+import { isI18n, kindOf, blankOfKind, describeArray, isUnlocalisedTextArray } from "../lib/json-shape.js";
 import { documentStats } from "../lib/format.js";
 import { localeMeta, tint } from "../lib/locales.js";
 import { buildRows, pathKey } from "../lib/rows.js";
@@ -36,7 +36,14 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
     return settled[key][locales[0]] || Object.values(settled[key]).find(Boolean) || "Untitled block";
   }, [settled, locales]);
 
-  const shapeFor = path => shapes.get(pathKey(path)) || null;
+  // Derived live while the array has contents, so a conversion is reflected
+  // immediately and undo cannot leave a stale description behind. The
+  // parse-time capture is only needed once an array is empty.
+  const shapeFor = path => {
+    const arr = getIn(doc, path);
+    if (Array.isArray(arr) && arr.length) return describeArray(arr);
+    return shapes.get(pathKey(path)) || null;
+  };
 
   const addItem = path => {
     const shape = shapeFor(path);
@@ -47,6 +54,19 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
         ? "Item added — " + shape.fields.map(f => f.key).join(", ")
         : "Item added"
     );
+  };
+
+  const localise = path => {
+    onArrayChange(
+      path,
+      arr => arr.map(text => {
+        const leaf = {};
+        locales.forEach(l => { leaf[l] = l === locales[0] ? String(text) : ""; });
+        return leaf;
+      }),
+      "localise items"
+    );
+    onToast("Converted to localised values — the existing text moved to " + locales[0]);
   };
 
   const jump = key => {
@@ -136,7 +156,17 @@ export default function Editor({ session, onValueChange, onArrayChange, onToast 
               );
             }
             if (row.type === "band") {
-              return <Band key={row.key} name={row.name} count={row.count} shape={shapeFor(row.path)} />;
+              const arr = getIn(doc, row.path);
+              const offerLocalise = localised && isUnlocalisedTextArray(arr);
+              return (
+                <Band
+                  key={row.key}
+                  name={row.name}
+                  count={row.count}
+                  shape={shapeFor(row.path)}
+                  onLocalise={offerLocalise ? () => localise(row.path) : null}
+                />
+              );
             }
             if (row.type === "localisedItem") {
               return (

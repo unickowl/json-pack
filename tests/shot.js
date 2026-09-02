@@ -6,7 +6,16 @@ const click = el => el.dispatchEvent(new MouseEvent("click", { bubbles: true }))
 (async () => {
   const t0 = Date.now();
   while (!$("#source") && Date.now() - t0 < 8000) await wait(50);
-  if (location.hash === "#footnotes") {
+  if (location.hash === "#unlocalised") {
+    const doc = {
+      section_title: { en: "Live Infrastructure, In Numbers", zh_tw: "測試", ja: "力口" },
+      footnotes: ["*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates."],
+      tags: ["fintech", "stablecoin"],
+    };
+    const el = $("#source");
+    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), "value").set.call(el, JSON.stringify(doc, null, 4));
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  } else if (location.hash === "#footnotes") {
     const doc = { footnotes: [
       { en: "*Represents the annualized gross transaction value associated with active clients, calculated using the median of company-provided low and high estimates.", zh_tw: "", ja: "" },
       { en: "", zh_tw: "", ja: "" } ] };

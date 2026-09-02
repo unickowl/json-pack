@@ -272,6 +272,64 @@ async function output() {
     " " + ok($$("img").length === imgs0 && !window.__x1 && !window.__x2 && !window.__x3));
   log.push("7  prototype clean           : " + ok(({}).en === undefined && ({}).constructor === Object));
 
+  // ── the inconsistency check that should have caught footnotes ───────────
+  await restart();
+  await paste(JSON.stringify({
+    section_title: { en: "Title", zh_tw: "標題", ja: "タイトル" },
+    footnotes: ["*Represents the annualized gross transaction value associated with active clients."],
+    tags: ["fintech", "stablecoin"],
+  }, null, 4));
+
+  const noticeText = () => $$(".notice span").map(n => n.textContent).join(" || ");
+  const bandFor = name => $$(".row--band").find(b => b.querySelector("h2").textContent.trim().toLowerCase() === name);
+  log.push("12 notice raised for prose   : " + ok(noticeText().includes("footnotes holds plain strings")) +
+    "\n     " + JSON.stringify(noticeText().slice(0, 160)));
+  log.push("12 notice suggests the shape : " + ok(noticeText().includes('[{ "en": "", "zh_tw": "", "ja": "" }]')));
+  log.push("12 tags not flagged          : " + ok(!noticeText().includes("tags holds")) + " (short tokens, not prose)");
+  log.push("12 fix offered on footnotes  : " + ok(!!bandFor("footnotes").querySelector(".add--fix")));
+  log.push("12 fix not offered on tags   : " + ok(!bandFor("tags").querySelector(".add--fix")));
+
+  click(bandFor("footnotes").querySelector(".add--fix")); await wait(140);
+  let conv = JSON.parse(await output());
+  log.push("12 converted to i18n leaves  : " + ok(Array.isArray(conv.footnotes) &&
+    JSON.stringify(Object.keys(conv.footnotes[0])) === '["en","zh_tw","ja"]' &&
+    conv.footnotes[0].en.startsWith("*Represents") && conv.footnotes[0].zh_tw === "" && conv.footnotes[0].ja === "") +
+    " -> " + JSON.stringify(conv.footnotes[0]).slice(0, 80));
+  log.push("12 tags left alone           : " + ok(JSON.stringify(conv.tags) === '["fintech","stablecoin"]'));
+  log.push("12 band now says localised   : " + ok(bandFor("footnotes").textContent.includes("localised text")));
+  log.push("12 fix button withdrawn      : " + ok(!bandFor("footnotes").querySelector(".add--fix")));
+  log.push("12 rows are localised rows   : " + ok($$(".row--localised").length === 1 &&
+    $$(".row--localised")[0].querySelectorAll("textarea").length === 3));
+
+  // the conversion is one step of history like anything else
+  keydown("z"); await wait(160);
+  conv = JSON.parse(await output());
+  log.push("12 conversion is undoable    : " + ok(typeof conv.footnotes[0] === "string") + " -> " + (typeof conv.footnotes[0]));
+  keydown("z", { shiftKey: true }); await wait(160);
+  conv = JSON.parse(await output());
+  log.push("12 and redoable              : " + ok(conv.footnotes[0] && typeof conv.footnotes[0] === "object"));
+
+  // adding after conversion must follow the new shape, not the parse-time one
+  const addAfter = () => {
+    let n = bandFor("footnotes");
+    while ((n = n.nextElementSibling)) {
+      if (n.classList.contains("row--add") || n.classList.contains("row--empty")) return n.querySelector(".add");
+      if (n.classList.contains("row--band")) break;
+    }
+    return null;
+  };
+  click(addAfter()); await wait(120);
+  conv = JSON.parse(await output());
+  log.push("12 add follows new shape     : " + ok(conv.footnotes.length === 2 &&
+    JSON.stringify(conv.footnotes[1]) === '{"en":"","zh_tw":"","ja":""}') + " -> " + JSON.stringify(conv.footnotes[1]));
+
+  // a document with nothing localised must not be nagged
+  await restart();
+  await paste('{"notes":["a plain sentence with spaces in it"]}');
+  log.push("12 no nag without i18n       : " + ok($$(".notice").length === 0 && !bandFor("notes").querySelector(".add--fix")));
+
+  await restart();
+  await paste('{"section_title":{"en":"x","zh_tw":"","ja":""}}');
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: () => Promise.reject(new Error("DENIED")) } });
   click([...$$(".btn--fill")].find(b => b.textContent.includes("Copy")));
   await wait(500);
